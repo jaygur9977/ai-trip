@@ -1,59 +1,71 @@
 const express = require('express');
-const bodyParser = require('body-parser');
+const mongoose = require('mongoose');
 const cors = require('cors');
-const { MongoClient } = require('mongodb');
+const bodyParser = require('body-parser');
+
+// Import Models
+const Trip = require('./models/Trip');
+const Hotel = require('./models/Hotel');
+const Itinerary = require('./models/Itinerary');
+
+// Initialize express app
 const app = express();
 
-// Middleware
+// Enable CORS
 app.use(cors());
-app.use(bodyParser.json());
 
-// MongoDB connection URI for a local instance
-const uri = 'mongodb://localhost:27017';  // Local MongoDB instance URL
+// Body parser middleware
+app.use(express.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
-// MongoDB client setup
-const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
+// MongoDB connection
+const mongoUri = 'mongodb://127.0.0.1:27017/AI-trip';
+mongoose.connect(mongoUri, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => console.log('MongoDB connected'))
+  .catch((err) => console.log('MongoDB connection error:', err));
 
-// POST endpoint to save the trip data
-app.post('/save-trip', async (req, res) => {
+// Routes
+
+// Create a new Trip document
+app.post('/api/trip', async (req, res) => {
+  const { userselection, tripdata, userEmail } = req.body;
+
+  // Validate required fields
+  if (!userEmail || !userselection || !tripdata) {
+    return res.status(400).json({ error: 'Required fields are missing' });
+  }
+
   try {
-    const { formdata, tripData, userEmail } = req.body;
+    const newTrip = new Trip({ userselection, tripdata, userEmail });
+    await newTrip.save();
+    res.status(201).json(newTrip);
+  } catch (error) {
+    console.error('Error creating trip:', error);
+    res.status(500).json({ error: 'Failed to create trip' });
+  }
+});
 
-    // Check if the email is present
-    if (!userEmail || !userEmail.includes('@')) {
-      return res.status(400).json({ error: 'Invalid or missing email' });
+// Fetch trip data by ID
+app.get('/api/trip/:tripId', async (req, res) => {
+  const { tripId } = req.params;
+
+  try {
+    // Fetch trip data from MongoDB
+    const trip = await Trip.findById(tripId);
+
+    if (!trip) {
+      return res.status(404).json({ error: 'Trip not found' });
     }
 
-    await client.connect();
-
-    const database = client.db('ai_trip_db');  // Name of the local database
-    const tripsCollection = database.collection('trips');  // Name of the collection
-
-    // Create a unique document ID (using current timestamp)
-    const docId = Date.now().toString();
-
-    // Prepare the document to insert
-    const document = {
-      userSelection: formdata,
-      tripData: tripData,
-      userEmail: userEmail,
-      id: docId,
-    };
-
-    // Insert the document into MongoDB
-    await tripsCollection.insertOne(document);
-
-    res.status(200).json({ message: 'Trip data saved successfully!' });
+    res.status(200).json(trip); // Return the trip data
   } catch (error) {
-    console.error('Error saving trip data to MongoDB:', error);
-    res.status(500).json({ error: 'Error saving trip data' });
-  } finally {
-    await client.close();
+    console.error('Error fetching trip:', error);
+    res.status(500).json({ error: 'Failed to fetch trip' });
   }
 });
 
 // Start server
-const PORT = process.env.PORT || 5000;
+const PORT = 3000;
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`Server running on http://localhost:${PORT}`);
 });

@@ -5,53 +5,59 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { FcGoogle } from "react-icons/fc";
 import { useGoogleLogin } from '@react-oauth/google';
 import axios from 'axios';
-import { doc, setDoc } from "firebase/firestore"; 
-import { db } from '../services/FirebaseConfig';
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
+import { useNavigate } from 'react-router-dom';
+
 const Trip = () => {
   const [place, setPlace] = useState('');
   const [day, setDay] = useState('');
   const [formdata, setFormData] = useState({});
   const [selectedBudget, setSelectedBudget] = useState(null);
   const [selectedTraveler, setSelectedTraveler] = useState(null);
-  const [chatSession, setChatSession] = useState(null); // Add state for chatSession
+  const [chatSession, setChatSession] = useState(null);
   const [dialogue, setDialogue] = useState(false);
-  const [Loading, setLoading] = useState(false)
-
+  const [Loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   const login = useGoogleLogin({
     onSuccess: tokenResponse => {
       console.log('Token received:', tokenResponse);
-      // Call getUserProfile with the access token
       getUserProfile(tokenResponse);
-
     },
     onError: error => console.log('Login Error:', error),
-
-
   });
-  const getUserProfile = (tokenInfo) => {
 
+  const getUserProfile = (tokenInfo) => {
     if (!tokenInfo?.access_token) {
       console.error('Access token is missing!');
+      toast.error('Failed to retrieve access token. Please try again.');
       return;
     }
 
     axios.get(`https://www.googleapis.com/oauth2/v1/userinfo?access_token=${tokenInfo?.access_token}`, {
-      Headers: {
-        Authorization: `Bearer ${tokenInfo?.access_token} `,
+      headers: {
+        Authorization: `Bearer ${tokenInfo?.access_token}`,
         Accept: 'application/json'
       }
     }).then((res) => {
-      console.log(res);
-      localStorage.setItem('user', JSON.stringify(res))
-      setDialogue(false)
+      console.log(res.data);
+      const user = {
+        uid: res.data.id,
+        email: res.data.email,
+        name: res.data.name,
+        picture: res.data.picture
+      };
+      localStorage.setItem('user', JSON.stringify(user));
+      setDialogue(false);
       condition();
-
-    })
-  }
+    }).catch((error) => {
+      console.error('Error fetching user profile:', error);
+      toast.error('Failed to fetch user profile. Please try again.');
+    });
+  };
 
   const handleInputChange = (name, value) => {
+    console.log(`Updating ${name} to:`, value); 
     setFormData({
       ...formdata,
       [name]: value,
@@ -69,15 +75,17 @@ const Trip = () => {
   };
 
   const condition = async () => {
+    if (!formdata.location || !formdata.days || !formdata.traveler || !formdata.budget) {
+      toast.error("Please fill all the fields before submitting.");
+      return;
+    }
 
-    const user = localStorage.getItem('user');
+    const user = JSON.parse(localStorage.getItem('user')); // Parse the user object
+    console.log("User from localStorage:", user); // Debugging line
 
     if (!user) {
-      setDialogue(true);
+      setDialogue(true); // Show dialogue if user is not logged in
     } else {
-
-
-
       toast('Form is submitted!', {
         position: 'top-right',
         autoClose: 5000,
@@ -95,54 +103,67 @@ const Trip = () => {
         .replace('{totaldays}', formdata?.days)
         .replace('{traveler}', formdata?.traveler)
         .replace('{budget}', formdata?.budget);
+
+        console.log("Final AI Prompt:", FINAL_PROMPT);
+
       if (chatSession) {
         try {
           const result = await chatSession.sendMessage(FINAL_PROMPT);
-          console.log(result.response.text());
-          setLoading(false)
-          SaveAiTrip(result.response.text())
+          const tripData = result.response.text(); // Get the AI response
+          console.log("AI Response (tripData):", tripData); 
+
+          // Parse the AI response
+          try {
+            const parsedTripData = JSON.parse(tripData);
+            console.log("Parsed Trip Data:", parsedTripData);
+          } catch (error) {
+            console.error("Error parsing AI response:", error);
+            toast.error("Failed to parse AI response. Please try again.");
+            return;
+          }
+
+          // Save the trip data to MongoDB
+          console.log("User ID being passed:", user.uid); // Debugging line
+          await SaveAiTrip(tripData); // Pass user.uid and tripData
+          setLoading(false);
         } catch (error) {
           console.error('Error while sending message:', error);
+          setLoading(false);
         }
+      } else {
+        console.error('Chat session is not defined');
+        setLoading(false);
       }
     }
   };
 
   const SaveAiTrip = async (tripData) => {
     setLoading(true);
-  
+    const user = JSON.parse(localStorage.getItem("user"));
+
+    if (!user || !user.email) {
+      console.error('User email is missing or not valid.');
+      toast.error('User email is missing or not valid.');
+      setLoading(false);
+      return;
+    }
+
     try {
-      const user = JSON.parse(localStorage.getItem('user'));
-  
-      if (!user || !user.email) {
-        console.error('User email is missing or not valid.');
-        toast.error('User email is missing or not valid.');
-        setLoading(false);
-        return;
-      }
-  
-      const tripPayload = {
-        formdata: formdata, // Save the form data
-        tripData: tripData, // Save the trip data from the AI
-        userEmail: user?.email, // Save the user's email
-      };
-  
-      // Send data to the backend API
-      const response = await axios.post('http://localhost:5000/save-trip', tripPayload);
-  
-      if (response.status === 200) {
-        toast.success('Trip data saved successfully!');
-      }
-  
+      const response = await axios.post('http://localhost:3000/api/trip', {
+        userselection: formdata,
+        tripdata: JSON.parse(tripData),
+        userEmail: user.email,
+      });
+
+      console.log("Trip saved with ID: ", response.data._id);
+      navigate('/view-trip/' + response.data._id);
     } catch (error) {
-      console.error('Error saving trip data to the backend:', error);
-      toast.error('Error saving trip data.');
+      console.error("Error saving trip: ", error);
+      toast.error('Failed to save trip. Please try again.');
     } finally {
       setLoading(false);
     }
   };
-
-  
 
   useEffect(() => {
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
@@ -150,8 +171,7 @@ const Trip = () => {
 
     const model = genAI.getGenerativeModel({
       model: 'gemini-2.0-flash',
-      systemInstruction: 'Generate a travel plan for location, with a given budget, traveler info, and days',
-    });
+      });
 
     const generationConfig = {
       temperature: 1,
@@ -169,8 +189,6 @@ const Trip = () => {
     setChatSession(newChatSession);
   }, []);
 
-
-
   return (
     <div className='sm:px-10 md:px-32 lg:px-56 xl:px-100 px-5 mt-3'>
       <h2 className='font-bold text-3xl items-center'>Tell us your travel preferences 🏕️🌴</h2>
@@ -178,11 +196,12 @@ const Trip = () => {
         Just provide some basic information, and our trip planner will generate a customized itinerary based on your preferences.
       </p>
       <div className='mt-20'>
-        <div className='mt-20 flex flex-col gap-10'>
+        <div className='myyt-20 flex flex-col gap-10'>
           <h2 className='text-xl my-3 font-bold'>What is your destination of choice?</h2>
           <input
             type='text'
-            placeholder='Write city'
+            placeholder='Write city with state'
+            className='p-2'
             value={place}
             onChange={(e) => {
               setPlace(e.target.value);
@@ -193,6 +212,7 @@ const Trip = () => {
           <input
             type='number'
             placeholder='Write number of days'
+            className='p-2'
             value={day}
             onChange={(e) => {
               setDay(e.target.value);
@@ -236,14 +256,13 @@ const Trip = () => {
 
       <div className='justify-end flex my-10'>
         <button
-        disabled={Loading}
-         onClick={condition}
+          disabled={Loading}
+          onClick={condition}
           type="button"
           className="text-white bg-gray-800 hover:bg-gray-900 focus:outline-none focus:ring-4 focus:ring-gray-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 ml-4 dark:bg-gray-800 dark:hover:bg-gray-700 dark:focus:ring-gray-700 dark:border-gray-700"
         >
-           {Loading ?
-          <AiOutlineLoading3Quarters />:"generate trip"
-         } </button>
+          {Loading ? <AiOutlineLoading3Quarters className="animate-spin" /> : "Generate Trip"}
+        </button>
       </div>
       {dialogue && (
         <div
@@ -273,8 +292,8 @@ const Trip = () => {
             </div>
           </div>
         </div>
-
       )}
+      <ToastContainer />
     </div>
   );
 };
