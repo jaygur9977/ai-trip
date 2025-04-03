@@ -4,9 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "dev": "webpack-dev-server --mode development"
+    "start": "node index.js",         
+    "dev": "nodemon index.js", 
+    "test": "jest"  
   },
   "keywords": [],
   "author": "",
