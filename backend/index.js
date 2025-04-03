@@ -13,7 +13,7 @@ app.use(cors());
 app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-const mongoUri = process.env.MONGO_URI;
+const mongoUri ='mongodb+srv://A-Trip-Project:997763@cluster0.d4vxh.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
 
 mongoose.connect(mongoUri, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log('MongoDB connected to Atlas'))
