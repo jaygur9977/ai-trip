@@ -4,10 +4,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 require('dotenv').config();
 
-// Import Models
 const Trip = require('./models/Trip');
-const Hotel = require('./models/Hotel');
-const Itinerary = require('./models/Itinerary');
 
 const app = express();
 
