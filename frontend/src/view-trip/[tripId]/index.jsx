@@ -19,7 +19,7 @@ const Viewtrip = () => {
 
   const GetTripData = async () => {
     try {
-      const response = await axios.get(`https://ai-trip-backed.onrender.com/api/trip/${tripId}`);
+      const response = await axios.get(`http://localhost:3000/api/trip/${tripId}`);
       setTrip(response.data); 
     } catch (error) {
       console.error('Error fetching trip data:', error);
