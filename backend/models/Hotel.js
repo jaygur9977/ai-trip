@@ -6,7 +6,7 @@ const hotelSchema = new mongoose.Schema({
   price: { type: String, required: true },
   rating: { type: Number, required: true },
   description: { type: String, required: true },
-  tripId: { type: mongoose.Schema.Types.ObjectId, ref: 'Trip', required: true }, // Reference to the Trip
+  tripId: { type: mongoose.Schema.Types.ObjectId, ref: 'Trip', required: true }, 
 });
 
 module.exports = mongoose.model('Hotel', hotelSchema);

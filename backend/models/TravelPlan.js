@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
 
-// TravelPlan Schema
 const TravelPlanSchema = new mongoose.Schema({
   location: { type: String, required: true },
   totalDays: { type: Number, required: true },
