@@ -48,7 +48,7 @@ const Viewtrip = () => {
       <Infosection trip={trip} />
 
       {/* Hotels */}
-      <Hotel trip={trip} />
+      {/* <Hotel trip={trip} /> */}
 
       {/* Daily Plans */}
       <Place trip={trip} />

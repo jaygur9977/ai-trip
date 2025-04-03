@@ -47,7 +47,10 @@ export const initializeChatSession = () => {
 
   const model = genAI.getGenerativeModel({
     model: "gemini-2.0-flash",
-    systemInstruction: "Generate Travel Plan for {location} for {totaldays} days for {traveler} with a  {budget} budget, Give me a Hotels options list with HotelName, Hotel address, Price, hotel image url, geo coordinates, rating, descriptions and suggest itinerary with placeName, Place Details, Place Image Url, Geo Coordinates, ticket Pricing, rating, Time travel each of the location for 3 days with each day plan with best time to visit in JSON format",
+    // systemInstruction: "Generate Travel Plan for {location} for {totaldays} days for {traveler} with a  {budget} budget, Give me a Hotels options list with HotelName, Hotel address, Price, hotel image url, geo coordinates, rating, descriptions and suggest itinerary with placeName, Place Details, Place Image Url, Geo Coordinates, ticket Pricing, rating, Time travel each of the location for {totaldays} days with each day plan with best time to visit in JSON format",
+
+
+    systemInstruction: "Generate day wise trip plan for {location} for {totaldays} days for {traveler} with a  {budget} budget, suggest itinerary with placeName, Place Details, Place Image Url, ticket Pricing, rating, Time travel each of the location for total days with each day plan with best time to visit and give as  in JSON format",
   });
 
   const generationConfig = {
