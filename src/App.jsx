@@ -1,9 +1,15 @@
-import React from 'react'
+import React from 'react';
+import HistoryPage from './HistoryPage';
+import ErrorBoundary from './ErrorBoundary';
 
 const App = () => {
+  const userEmail = 'user@example.com'; 
+  
   return (
-    <div>App</div>
-  )
-}
+    <ErrorBoundary>
+      <HistoryPage userEmail={userEmail} />
+    </ErrorBoundary>
+  );
+};
 
-export default App
+export default App;
