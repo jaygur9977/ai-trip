@@ -140,7 +140,7 @@ const Trip = () => {
     }
 
     try {
-      const response = await axios.post('https://ai-trip-backed.onrender.com/api/trip', {
+      const response = await axios.post('https://ai-trip-backend.onrender.com/api/trip', {
         userselection: formdata,
         tripdata: JSON.parse(tripData),
         userEmail: user.email,
