@@ -471,7 +471,7 @@ const Trip = () => {
   }, []);
 
   return (
-    <div className='max-w-6xl mx-auto mt-6 px-4 sm:px-6 lg:px-8 py-8'>
+    <div className='max-w-6xl mx-auto mt-20 px-4 sm:px-6 lg:px-8 py-8'>
       {/* Header Section */}
       <motion.div 
         initial={{ opacity: 0, y: -20 }}
